@@ -1,0 +1,5 @@
+(library
+ (name chat_app)
+ (public_name chat_app)
+ (modules input server client communication constants)
+ (libraries lwt.unix ipaddr))

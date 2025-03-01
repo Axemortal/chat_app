@@ -1,0 +1,28 @@
+(lang dune 3.17)
+
+(name chat_app)
+
+(generate_opam_files true)
+
+(source
+ (github username/reponame))
+
+(authors "Author Name <author@example.com>")
+
+(maintainers "Maintainer Name <maintainer@example.com>")
+
+(license LICENSE)
+
+(documentation https://url/to/documentation)
+
+(package
+ (name chat_app)
+ (synopsis
+  "A chat app that allows communication between a server and a client")
+ (description
+  "A client will connect to a server based on the IP address and port number provided. Once connected, both parties will be able to send messages to each other.")
+ (depends ocaml)
+ (tags
+  ("add topics" "to describe" your project)))
+
+; See the complete stanza docs at https://dune.readthedocs.io/en/stable/reference/dune-project/index.html

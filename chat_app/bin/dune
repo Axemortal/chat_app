@@ -1,0 +1,4 @@
+(executable
+ (public_name chat_app)
+ (name main)
+ (libraries chat_app lwt.unix lwt))
