@@ -10,8 +10,7 @@ let get_client_address client_socket =
 let rec accept_connections server_socket =
   Lwt_unix.accept server_socket >>= fun (client_socket, _) ->
 
-    Printf.printf "Client (%s) connected\n" (get_client_address client_socket);
-    flush stdout;
+    Printf.printf "Client (%s) connected\n%!" (get_client_address client_socket);
 
     let input = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
     let output = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
@@ -44,6 +43,5 @@ let start_server port =
 let init () =
   let port = Input.get_valid_port () in
   Printf.printf "Starting server on port %d\n" port;
-  Printf.printf "Press Ctrl+C to stop the server\n";
-  flush stdout;
+  Printf.printf "Press Ctrl+C to stop the server\n%!";
   Lwt_main.run (start_server port)

@@ -1,41 +1,58 @@
 open Lwt.Infix
 
 let handle_communication input_channel output_channel =
-  let rec receive_loop () =
+  let format_time timestamp =
+    let time = Unix.gmtime timestamp in
+    Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
+      (time.tm_year + 1900) (time.tm_mon + 1) time.tm_mday
+      time.tm_hour time.tm_min time.tm_sec
+  in
+
+  let rec receive_loop () = 
     Lwt_io.read_line_opt input_channel >>= function
-    | Some msg when String.starts_with ~prefix:"Message Received: " msg ->
+    | Some msg when String.starts_with ~prefix:"Message Received: " msg -> 
       (try
-        (* Extract timestamp from the acknowledgment *)
-        let time_str, _ = String.split_on_char ':' (String.sub msg 17 (String.length msg - 17)) |> List.hd, List.tl in
-        let time_sent = float_of_string time_str in
-        let time_received = Unix.gettimeofday () in
-        Printf.printf "Acknowledgment received for message sent at %f. RTT: %.6f seconds\n%!" time_sent (time_received -. time_sent)
-      with _ ->
+        let timestamp_str = String.sub msg 18 10 in
+        let timestamp = float_of_string_opt timestamp_str in
+        match timestamp with
+        | Some ts ->
+            Printf.printf "====================\n%!";
+            Printf.printf "Acknowledgment received for message sent at %s\n%!" (format_time ts);
+            let time_received = Unix.gettimeofday () in
+            Printf.printf "RTT: %.6f seconds\n%!" (time_received -. ts);
+            Printf.printf "====================\n%!";
+        | None -> 
+            Printf.printf "Malformed timestamp in acknowledgment: %s\n%!" timestamp_str
+      with _ -> 
         Printf.printf "Malformed acknowledgment: %s\n%!" msg);
       receive_loop ()
-    | Some msg ->
-        Printf.printf "Received: %s\n%!" msg;
-        (* Extract timestamp to include in the acknowledgment *)
-        let time_sent = String.split_on_char ':' msg |> List.hd in
-        Lwt_io.write_line output_channel ("Message Received: " ^ time_sent) >>= receive_loop
+    | Some msg -> 
+        (match String.split_on_char ':' msg with
+        | time_str :: rest -> 
+            let message = String.concat ":" rest in
+            Printf.printf "Received message: %s\n%!" message;
+            Lwt_io.write_line output_channel ("Message Received: " ^ time_str) >>= receive_loop
+        | _ ->
+            Printf.printf "Malformed message: %s\n%!" msg;
+            receive_loop ()
+        )
     | None -> 
-        Printf.printf "Client disconnected.\n%!";
+        Printf.printf "Session disconnected.\n%!"; 
         Lwt.return_unit
   in
 
   let rec send_loop () =
     Lwt_io.read_line_opt Lwt_io.stdin >>= function
-    | Some msg ->
-        let time_sent = Unix.gettimeofday () |> string_of_float in
-        let msg_with_time = time_sent ^ ":" ^ msg in
+    | Some msg -> 
+        let time_sent_str = Unix.gettimeofday () |> string_of_float in
+        let msg_with_time = time_sent_str ^ ":" ^ msg in
         Lwt_io.write_line output_channel msg_with_time >>= send_loop
     | None -> 
-        Printf.printf "Input closed. Stopping communication.\n%!";
+        Printf.printf "Input closed. Stopping communication.\n%!"; 
         Lwt.return_unit
   in
 
-  Lwt.join [receive_loop (); send_loop ()]
-
+  Lwt.pick [receive_loop (); send_loop ()]
 
 let close_connection socket input output =
   Lwt.catch
